@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.TimeZone;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
@@ -53,9 +55,8 @@ public class FileServer {
   @Value("${server.port}")
   private int port;
 
-  @RequestMapping(
+  @GetMapping(
       path = "/file-server-location",
-      consumes = ALL_VALUE,
       produces = MediaType.TEXT_PLAIN_VALUE)
   @ResponseBody
   public String getFileLocation() {
@@ -72,11 +73,28 @@ public class FileServer {
     // DO NOT use multipartFile.transferTo(), see
     // https://stackoverflow.com/questions/60336929/java-nio-file-nosuchfileexception-when-file-transferto-is-called
     try (InputStream is = multipartFile.getInputStream()) {
-      var destinationFile = destinationDir.toPath().resolve(multipartFile.getOriginalFilename());
-      Files.deleteIfExists(destinationFile);
-      Files.copy(is, destinationFile);
+      // Sanitize filename to prevent path traversal attacks
+      String originalFilename = multipartFile.getOriginalFilename();
+      if (originalFilename == null || originalFilename.isEmpty()) {
+        throw new IOException("Invalid filename");
+      }
+      // Extract only the filename, removing any path components
+      String sanitizedFilename = FilenameUtils.getName(originalFilename);
+      // Additional validation: reject filenames with path traversal sequences
+      if (sanitizedFilename.contains("..") || sanitizedFilename.contains("/") || sanitizedFilename.contains("\\")) {
+        throw new IOException("Invalid filename: path traversal detected");
+      }
+      Path destinationFile = destinationDir.toPath().resolve(sanitizedFilename);
+      // Ensure the resolved path is still within the destination directory
+      Path normalizedDestination = destinationFile.normalize();
+      Path normalizedDestinationDir = destinationDir.toPath().normalize();
+      if (!normalizedDestination.startsWith(normalizedDestinationDir)) {
+        throw new IOException("Invalid filename: path traversal detected");
+      }
+      Files.deleteIfExists(normalizedDestination);
+      Files.copy(is, normalizedDestination);
+      log.debug("File saved to {}", normalizedDestination);
     }
-    log.debug("File saved to {}", new File(destinationDir, multipartFile.getOriginalFilename()));
 
     return new ModelAndView(
         new RedirectView("files", true),

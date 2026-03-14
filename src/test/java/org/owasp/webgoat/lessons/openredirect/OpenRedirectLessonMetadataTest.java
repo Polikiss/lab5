@@ -37,9 +37,16 @@ class OpenRedirectLessonMetadataTest {
   }
 
   @Test
-  void realRedirectReturnsRedirectPrefixForSuppliedUrl() {
+  void realRedirectBlocksUnsafeExternalUrls() {
     ModelAndView response = realRedirect.real("https://attacker.example");
 
-    assertThat(response.getViewName()).isEqualTo("redirect:https://attacker.example");
+    assertThat(response.getViewName()).isEqualTo("redirect:/WebGoat/start.mvc");
+  }
+
+  @Test
+  void realRedirectAllowsWhitelistedUrls() {
+    ModelAndView response = realRedirect.real("https://localhost/WebGoat");
+
+    assertThat(response.getViewName()).isEqualTo("redirect:https://localhost/WebGoat");
   }
 }
