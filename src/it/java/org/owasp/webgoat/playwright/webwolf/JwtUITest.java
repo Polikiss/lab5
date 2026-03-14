@@ -23,12 +23,15 @@ import org.jose4j.lang.JoseException;
 
 class JwtUITest extends PlaywrightTest {
 
+  private static final String TEST_SECRET_KEY = "test";
+  private static final String TEST_JWT_TOKEN =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
   @Test
   void shouldDecodeJwt(Browser browser) {
     var page = Authentication.sylvester(browser);
-    var secretKey = "test";
-    var jwt =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+    var secretKey = TEST_SECRET_KEY;
+    var jwt = TEST_JWT_TOKEN;
 
     page.navigate(webWolfURL("jwt"));
     page.getByPlaceholder("Enter your secret key").fill(secretKey);

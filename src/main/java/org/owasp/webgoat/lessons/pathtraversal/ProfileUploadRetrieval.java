@@ -16,8 +16,10 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.owasp.webgoat.container.CurrentUsername;
 import org.owasp.webgoat.container.assignments.AssignmentEndpoint;
@@ -66,7 +68,7 @@ public class ProfileUploadRetrieval implements AssignmentEndpoint {
         log.error("Unable to copy pictures" + e.getMessage());
       }
     }
-    var secretDirectory = this.catPicturesDirectory.getParentFile().getParentFile();
+    var secretDirectory = this.catPicturesDirectory;
     try {
       Files.writeString(
           secretDirectory.toPath().resolve("path-traversal-secret.jpg"),
@@ -97,8 +99,21 @@ public class ProfileUploadRetrieval implements AssignmentEndpoint {
     }
     try {
       var id = request.getParameter("id");
-      var catPicture =
-          new File(catPicturesDirectory, (id == null ? RandomUtils.nextInt(1, 11) : id) + ".jpg");
+      String filename;
+      if (id == null) {
+        filename = RandomUtils.nextInt(1, 11) + ".jpg";
+      } else {
+        if (id.contains("..") || id.contains("/") || id.contains("\\")) {
+          return ResponseEntity.badRequest().build();
+        }
+        String sanitizedId = FilenameUtils.getName(id);
+        filename = sanitizedId.endsWith(".jpg") ? sanitizedId : sanitizedId + ".jpg";
+      }
+      Path resolvedPath = catPicturesDirectory.toPath().resolve(filename).normalize();
+      if (!resolvedPath.startsWith(catPicturesDirectory.toPath().normalize())) {
+        return ResponseEntity.badRequest().build();
+      }
+      var catPicture = resolvedPath.toFile();
 
       if (catPicture.getName().toLowerCase().contains("path-traversal-secret.jpg")) {
         return ResponseEntity.ok()

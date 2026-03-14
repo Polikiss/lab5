@@ -1,5 +1,12 @@
 var dataFetched = false;
 
+function escapeHtml(text) {
+    if (text == null) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function selectUser() {
 
     var newEmployeeID = $("#UserSelect").val();
@@ -24,12 +31,12 @@ function ajaxFunction(userId) {
         html = html + '<td>Salary</td>';
 
         for (var i = 0; i < result.length; i++) {
-            html = html + '<tr id = "' + result[i].UserID + '"</tr>';
-            html = html + '<td>' + result[i].UserID + '</td>';
-            html = html + '<td>' + result[i].FirstName + '</td>';
-            html = html + '<td>' + result[i].LastName + '</td>';
-            html = html + '<td>' + result[i].SSN + '</td>';
-            html = html + '<td>' + result[i].Salary + '</td>';
+            html = html + '<tr id = "' + escapeHtml(result[i].UserID) + '">';
+            html = html + '<td>' + escapeHtml(result[i].UserID) + '</td>';
+            html = html + '<td>' + escapeHtml(result[i].FirstName) + '</td>';
+            html = html + '<td>' + escapeHtml(result[i].LastName) + '</td>';
+            html = html + '<td>' + escapeHtml(result[i].SSN) + '</td>';
+            html = html + '<td>' + escapeHtml(result[i].Salary) + '</td>';
             html = html + '</tr>';
         }
         html = html + '</tr></table>';

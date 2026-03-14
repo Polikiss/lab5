@@ -42,18 +42,9 @@ class ProfileUploadRetrievalTest extends LessonTest {
         .andExpect(header().string("Location", containsString("?id=")))
         .andExpect(content().contentTypeCompatibleWith(MediaType.IMAGE_JPEG));
 
-    // Browse the directories
-    var uri = new URI("/PathTraversal/random-picture?id=%2E%2E%2F%2E%2E%2F");
+    // Retrieve the secret file (path-traversal-secret.jpg is in the cats directory)
     mockMvc
-        .perform(get(uri))
-        .andExpect(status().is(404))
-        // .andDo(MockMvcResultHandlers.print())
-        .andExpect(content().string(containsString("path-traversal-secret.jpg")));
-
-    // Retrieve the secret file (note: .jpg is added by the server)
-    uri = new URI("/PathTraversal/random-picture?id=%2E%2E%2F%2E%2E%2Fpath-traversal-secret");
-    mockMvc
-        .perform(get(uri))
+        .perform(get("/PathTraversal/random-picture?id=path-traversal-secret"))
         .andExpect(status().is(200))
         .andExpect(
             content().string("You found it submit the SHA-512 hash of your username as answer"))
@@ -65,6 +56,13 @@ class ProfileUploadRetrievalTest extends LessonTest {
         .andExpect(status().is(200))
         .andExpect(jsonPath("$.assignment", equalTo("ProfileUploadRetrieval")))
         .andExpect(jsonPath("$.lessonCompleted", is(true)));
+  }
+
+  @Test
+  void pathTraversalAttemptIsBlocked() throws Exception {
+    mockMvc
+        .perform(get("/PathTraversal/random-picture?id=%2E%2E%2F%2E%2E%2Fpath-traversal-secret"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test

@@ -11,6 +11,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InvalidClassException;
 import java.io.ObjectInputStream;
+import java.io.ObjectInputFilter;
 import java.util.Base64;
 import org.dummy.insecure.framework.VulnerableTaskHolder;
 import org.owasp.webgoat.container.assignments.AssignmentEndpoint;
@@ -41,6 +42,17 @@ public class InsecureDeserializationTask implements AssignmentEndpoint {
 
     try (ObjectInputStream ois =
         new ObjectInputStream(new ByteArrayInputStream(Base64.getDecoder().decode(b64token)))) {
+      ois.setObjectInputFilter(
+          filterInfo -> {
+            String className = filterInfo.serialClass() != null
+                ? filterInfo.serialClass().getName() : null;
+            if (className != null && !className.equals(VulnerableTaskHolder.class.getName())
+                && !className.startsWith("java.")
+                && !className.startsWith("org.dummy.insecure.framework.")) {
+              return ObjectInputFilter.Status.REJECTED;
+            }
+            return ObjectInputFilter.Status.ALLOWED;
+          });
       before = System.currentTimeMillis();
       Object o = ois.readObject();
       if (!(o instanceof VulnerableTaskHolder)) {
